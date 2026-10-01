@@ -1,36 +1,214 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Softoniqs Digital Solutions
 
-## Getting Started
+A modern, responsive software company website built with Next.js, Supabase, and Cloudinary. The website is focused on showcasing company services, case studies, projects, team/about information, and pricing.
 
-First, run the development server:
+🚀 Tech Stack
+Technology	Purpose
+Next.js	Frontend, routing & SEO
+TypeScript	Type-safe development
+Tailwind CSS	Responsive UI & styling
+Supabase	Database & authentication
+Cloudinary	Project/service images
+Vercel	Deployment
+🎯 Main Purpose
+The website is designed as a professional company portfolio and marketing platform.
 
-```bash
+Main Sections
+🏠 Home
+🛠️ Services
+📁 Case Studies
+👥 About Company
+💰 Pricing
+📞 Contact
+🔐 Admin Dashboard
+🗂️ Website Structure
+/
+├── /services
+├── /case-studies
+├── /case-studies/[slug]
+├── /about
+├── /pricing
+├── /contact
+├── /login
+└── /admin
+    ├── /services
+    ├── /case-studies
+    └── /pricing
+🧩 Core Features
+Services
+Admin can create and manage:
+
+Service title
+Description
+Service icon/image
+Features
+Technologies
+Starting price (optional)
+Case Studies
+Each case study can include:
+
+Project title
+Client/company name
+Project description
+Challenge
+Solution
+Technologies used
+Project results
+Featured image
+Gallery images
+Project URL
+SEO-friendly slug
+Pricing
+Pricing plans can be managed from the admin panel.
+
+Example:
+
+Plan	Price	Features
+Starter	$499	Basic website
+Business	$999	Website + CMS
+Enterprise	Custom	Custom software
+About
+Company information including:
+
+Company introduction
+Mission & vision
+Team
+Skills
+Technologies
+Company statistics
+Contact
+Visitors can submit:
+
+Name
+Email
+Phone
+Company
+Message
+Contact submissions are stored in Supabase for admin management.
+
+🗄️ Database
+Main Supabase tables:
+
+profiles
+services
+case_studies
+pricing_plans
+contact_messages
+Basic relationships:
+
+profiles
+   │
+   └── admin
+
+services
+   └── service information
+
+case_studies
+   └── projects / portfolio
+
+pricing_plans
+   └── pricing packages
+
+contact_messages
+   └── customer inquiries
+🖼️ Cloudinary
+Cloudinary is used for:
+
+Service images
+Case study thumbnails
+Project galleries
+Team images
+Company/website assets
+Only image URLs and required Cloudinary identifiers are stored in Supabase.
+
+🔐 Admin Dashboard
+Only authorized admins can manage website content.
+
+Admin Login
+     ↓
+Dashboard
+     ↓
+┌─────────────┐
+│ Services    │
+│ Case Studies│
+│ Pricing     │
+│ Messages    │
+└─────────────┘
+Admins can:
+
+Create/update/delete services
+Create/update/delete case studies
+Manage pricing plans
+View contact messages
+Upload/manage images
+📱 Design Requirements
+Fully responsive
+Mobile-first
+Modern SaaS/software-company design
+Fast page loading
+Accessible components
+SEO-friendly pages
+Clean animations
+Professional typography
+Dark/light theme optional
+🔍 SEO
+Each service and case study should have:
+
+SEO-friendly slug
+Meta title
+Meta description
+Open Graph image
+Structured metadata where appropriate
+Example:
+
+/services/web-development
+/case-studies/ecommerce-platform
+🔒 Security
+Protect admin routes
+Use Supabase Row Level Security (RLS)
+Never expose service-role keys
+Validate contact forms
+Sanitize user input
+Keep Cloudinary API secrets server-side
+Restrict admin operations to authorized users
+⚙️ Environment Variables
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+
+SUPABASE_SERVICE_ROLE_KEY=
+
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+📁 Suggested Project Structure
+src/
+├── app/
+│   ├── page.tsx
+│   ├── services/
+│   ├── case-studies/
+│   ├── about/
+│   ├── pricing/
+│   ├── contact/
+│   └── admin/
+├── components/
+│   ├── Header.tsx
+│   ├── Footer.tsx
+│   ├── ServiceCard.tsx
+│   ├── CaseStudyCard.tsx
+│   ├── PricingCard.tsx
+│   └── ContactForm.tsx
+├── lib/
+│   ├── supabase/
+│   └── cloudinary/
+├── types/
+└── styles/
+🚀 Development
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Open:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000
+📌 Project Goal
+Build a professional software company website that clearly communicates what the company does, what it has built, how much its services cost, and how potential clients can get in touch.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The architecture should remain simple, scalable, SEO-friendly, and easy to manage through the admin dashboard
