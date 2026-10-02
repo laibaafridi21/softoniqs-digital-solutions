@@ -2,7 +2,7 @@
 
 A modern, responsive software company website built with **Next.js, Supabase, and Cloudinary**. The website is focused on showcasing company services, case studies, projects, team/about information, and pricing.
 
-## 🚀 Tech Stack
+## 🚀 Tech Stack & Tools
 
 | Technology   | Purpose                   |
 | ------------ | ------------------------- |
