@@ -1,13 +1,10 @@
 
-import CaseStudies from "../components/CaseStudies";
+import CaseStudies from "../../components/CaseStudies";
 
-
-
-
-export default function CaseStudiesPage(){
-    return(
-        <main>
-            <CaseStudies/>
-        </main>
-    )
-}    
+export default function CaseStudiesPage() {
+  return (
+    <main>
+      <CaseStudies />
+    </main>
+  );
+}

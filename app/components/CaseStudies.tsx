@@ -1,7 +1,37 @@
-import caseStudies from "../case-studies/caseStudies";
+ "use client";
+ 
+ import {useEffect, useState}  from "react";
 import CaseStudyCard from "./CaseStudyCard";
 
+type CaseStudy= {
+id: number;
+title: string;
+slug: string;
+description: string;
+category: string;
+technologies: string [] | string;
+
+
+
+
+}
+
+
+
+
 export default function CaseStudies(){
+const [caseStudies, setCaseStudies] =useState <CaseStudy[]> ([]);
+useEffect(() => {
+    fetch("http://localhost:5000/api/case-studies")
+      .then((res) => res.json())
+      .then((data) => setCaseStudies(data))
+      .catch((error) =>
+        console.log("Error fetching case studies:", error)
+      );
+  }, []);
+
+
+
 return(
     <section className="py-20">
 <h2 className="text-3xl font-bold mb-8 text-center"    >Our Case Studies</h2>
@@ -13,7 +43,12 @@ return(
     slug= {caseStudy.slug}
     description={caseStudy.description}
     category={caseStudy.category}
-    technologies={caseStudy.technologies}
+  
+    technologies={
+        typeof caseStudy.technologies === "string"
+          ? JSON.parse(caseStudy.technologies)
+          : caseStudy.technologies
+      }
 />
 )
 )

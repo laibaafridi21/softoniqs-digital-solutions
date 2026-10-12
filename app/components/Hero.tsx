@@ -1,8 +1,8 @@
    import Link from "next/link"
    export default function Hero(){
     return(
-        <section className ="py-20 text-center space-y-6 " >
-            <div className=" grid grid-cols-1 md:grid-cols-2  gap-10" >
+        <section className ="relative bg-slate-950 py-24 text-center px-6" >
+            <div className="mx-auto max-w-4xl flex flex-col item-center justify-center " >
                 <div>
 <h1 className ="  text-4xl md:text-5;//xl  font-bold "  >Build Better Digital Solutions</h1>
 <p className = "text-lg mb-4 max-w-xl mx-auto" >We build modern software solutions for growing businesses</p>
