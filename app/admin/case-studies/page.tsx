@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ChangeEvent } from "react";
 
 type CaseStudy = {
   id: number;
@@ -10,18 +9,31 @@ type CaseStudy = {
   description: string;
   category: string;
   technologies: string[] | string;
-  client?: string | null;
-  challenge?: string | null;
-  solution?: string | null;
-  results?: string | null;
-  featured_image?: string | null;
-  gallery_images?: string[] | null;
-  project_url?: string | null;
+  client: string;
+  challenge: string;
+  solution: string;
+  results: string;
+  featured_image: string;
+  gallery_images: string[] | string;
+  project_url: string;
 };
 
-const API_URL = "http://localhost:5000/api/case-studies";
+type CaseStudyForm = {
+  title: string;
+  slug: string;
+  description: string;
+  category: string;
+  technologies: string;
+  client: string;
+  challenge: string;
+  solution: string;
+  results: string;
+  featured_image: string;
+  gallery_images: string;
+  project_url: string;
+};
 
-const emptyForm = {
+const emptyForm: CaseStudyForm = {
   title: "",
   slug: "",
   description: "",
@@ -36,28 +48,57 @@ const emptyForm = {
   project_url: "",
 };
 
+const API_URL = "http://localhost:5000/api/case-studies";
+const UPLOAD_URL = "http://localhost:5000/api/upload";
+
+function parseList(value: string[] | string | null | undefined): string[] {
+  if (Array.isArray(value)) return value;
+
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {
+    
+  }
+
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getToken() {
+  return sessionStorage.getItem("token");
+}
+
 export default function AdminCaseStudiesPage() {
   const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<CaseStudyForm>(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   async function loadCaseStudies() {
+    setLoading(true);
+    setError("");
+
     try {
       const response = await fetch(API_URL);
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error("Could not load case studies.");
+        throw new Error(data.error || "Failed to load case studies.");
       }
 
-      const data = await response.json();
-      setCaseStudies(Array.isArray(data) ? data : data.caseStudies ?? []);
+      setCaseStudies(Array.isArray(data) ? data : data.caseStudies || []);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Could not load case studies."
+        err instanceof Error ? err.message : "Failed to load case studies."
       );
     } finally {
       setLoading(false);
@@ -68,94 +109,153 @@ export default function AdminCaseStudiesPage() {
     loadCaseStudies();
   }, []);
 
-  function updateField(
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  function handleChange(
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
     const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
+
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
   }
 
-  function resetForm() {
-    setForm(emptyForm);
-    setEditingId(null);
-  }
+  async function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
 
-  function handleEdit(study: CaseStudy) {
-    let techList: string[] = [];
+    if (!file) return;
 
-    try {
-      techList =
-        typeof study.technologies === "string"
-          ? JSON.parse(study.technologies)
-          : study.technologies ?? [];
-    } catch {
-      techList = [];
+    setError("");
+    setSuccess("");
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file.");
+      event.target.value = "";
+      return;
     }
 
-    setForm({
-      title: study.title ?? "",
-      slug: study.slug ?? "",
-      description: study.description ?? "",
-      category: study.category ?? "",
-      technologies: techList.join(", "),
-      client: study.client ?? "",
-      challenge: study.challenge ?? "",
-      solution: study.solution ?? "",
-      results: study.results ?? "",
-      featured_image: study.featured_image ?? "",
-      gallery_images: (study.gallery_images ?? []).join(", "),
-      project_url: study.project_url ?? "",
-    });
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image size must be 5 MB or less.");
+      event.target.value = "";
+      return;
+    }
 
-    setEditingId(study.id);
-    setError("");
-    setSuccess("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setSuccess("");
-
-    const token = sessionStorage.getItem("token");
+    const token = getToken();
 
     if (!token) {
       window.location.href = "/login";
       return;
     }
 
+    const formData = new FormData();
+    formData.append("image", file);
+
+    setUploadingImage(true);
+
+    try {
+      const response = await fetch(UPLOAD_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          sessionStorage.removeItem("token");
+          window.location.href = "/login";
+          return;
+        }
+
+        throw new Error(data.error || "Image upload failed.");
+      }
+
+      setForm((current) => ({
+        ...current,
+        featured_image: data.url,
+      }));
+
+      setSuccess("Image uploaded successfully.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Image upload failed."
+      );
+    } finally {
+      setUploadingImage(false);
+      event.target.value = "";
+    }
+  }
+
+  function startEditing(caseStudy: CaseStudy) {
+    setEditingId(caseStudy.id);
+
+    setForm({
+      title: caseStudy.title || "",
+      slug: caseStudy.slug || "",
+      description: caseStudy.description || "",
+      category: caseStudy.category || "",
+      technologies: parseList(caseStudy.technologies).join(", "),
+      client: caseStudy.client || "",
+      challenge: caseStudy.challenge || "",
+      solution: caseStudy.solution || "",
+      results: caseStudy.results || "",
+      featured_image: caseStudy.featured_image || "",
+      gallery_images: parseList(caseStudy.gallery_images).join("\n"),
+      project_url: caseStudy.project_url || "",
+    });
+
+    setError("");
+    setSuccess("");
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function resetForm() {
+    setForm(emptyForm);
+    setEditingId(null);
+    setError("");
+    setSuccess("");
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setError("");
+    setSuccess("");
+
+    const token = getToken();
+
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
+
+    const technologies = form.technologies
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const galleryImages = form.gallery_images
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
     const payload = {
       ...form,
-      title: form.title.trim(),
-      slug: form.slug.trim(),
-      description: form.description.trim(),
-      category: form.category.trim(),
-      technologies: JSON.stringify(
-        form.technologies
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean)
-      ),
-      gallery_images: form.gallery_images
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      client: form.client.trim(),
-      challenge: form.challenge.trim(),
-      solution: form.solution.trim(),
-      results: form.results.trim(),
-      featured_image: form.featured_image.trim(),
-      project_url: form.project_url.trim(),
+      technologies: JSON.stringify(technologies),
+      gallery_images: galleryImages,
     };
 
     setSaving(true);
 
     try {
       const response = await fetch(
-        editingId === null ? API_URL : `${API_URL}/${editingId}`,
+        editingId !== null ? `${API_URL}/${editingId}` : API_URL,
         {
-          method: editingId === null ? "POST" : "PUT",
+          method: editingId !== null ? "PUT" : "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -164,29 +264,31 @@ export default function AdminCaseStudiesPage() {
         }
       );
 
-      const data = await response.json().catch(() => ({}));
-
-      if (response.status === 401 || response.status === 403) {
-        sessionStorage.removeItem("token");
-        window.location.href = "/login";
-        return;
-      }
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Could not save the case study.");
+        if (response.status === 401 || response.status === 403) {
+          sessionStorage.removeItem("token");
+          window.location.href = "/login";
+          return;
+        }
+
+        throw new Error(data.error || "Failed to save case study.");
       }
 
       setSuccess(
-        editingId === null
-          ? "Case study added successfully."
-          : "Case study updated successfully."
+        editingId !== null
+          ? "Case study updated successfully."
+          : "Case study added successfully."
       );
 
-      resetForm();
+      setForm(emptyForm);
+      setEditingId(null);
+
       await loadCaseStudies();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Could not save the case study."
+        err instanceof Error ? err.message : "Failed to save case study."
       );
     } finally {
       setSaving(false);
@@ -194,11 +296,13 @@ export default function AdminCaseStudiesPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!window.confirm("Are you sure you want to delete this case study?")) {
-      return;
-    }
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this case study?"
+    );
 
-    const token = sessionStorage.getItem("token");
+    if (!confirmed) return;
+
+    const token = getToken();
 
     if (!token) {
       window.location.href = "/login";
@@ -216,204 +320,334 @@ export default function AdminCaseStudiesPage() {
         },
       });
 
-      const data = await response.json().catch(() => ({}));
-
-      if (response.status === 401 || response.status === 403) {
-        sessionStorage.removeItem("token");
-        window.location.href = "/login";
-        return;
-      }
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Could not delete the case study.");
-      }
+        if (response.status === 401 || response.status === 403) {
+          sessionStorage.removeItem("token");
+          window.location.href = "/login";
+          return;
+        }
 
-      setCaseStudies((current) =>
-        current.filter((study) => study.id !== id)
-      );
-
-      if (editingId === id) {
-        resetForm();
+        throw new Error(data.error || "Failed to delete case study.");
       }
 
       setSuccess("Case study deleted successfully.");
+
+      if (editingId === id) {
+        setForm(emptyForm);
+        setEditingId(null);
+      }
+
+      await loadCaseStudies();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Could not delete the case study."
+        err instanceof Error ? err.message : "Failed to delete case study."
       );
     }
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-12">
-      <h1 className="mb-8 text-3xl font-bold">Manage Case Studies</h1>
+    <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <h1 className="mb-2 text-3xl font-bold">
+          Case Study Management
+        </h1>
 
-      {error && (
-        <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">
-          {error}
+        <p className="mb-8 text-slate-600">
+          Add, edit, and manage your company case studies.
         </p>
-      )}
 
-      {success && (
-        <p role="status" className="mb-4 rounded-lg bg-green-50 p-3 text-green-700">
-          {success}
-        </p>
-      )}
-
-      <form
-        onSubmit={handleSubmit}
-        className="mb-12 space-y-5 rounded-xl border p-6"
-      >
-        <h2 className="text-xl font-semibold">
-          {editingId === null ? "Add Case Study" : "Edit Case Study"}
-        </h2>
-
-        {(
-          [
-            ["title", "Title"],
-            ["slug", "Slug"],
-            ["category", "Category"],
-            ["client", "Client / Company"],
-            ["featured_image", "Featured Image URL"],
-            ["project_url", "Project URL"],
-          ] as const
-        ).map(([name, label]) => (
-          <div key={name}>
-            <label htmlFor={name} className="mb-1 block font-medium">
-              {label}
-            </label>
-            <input
-              id={name}
-              name={name}
-              value={form[name]}
-              onChange={updateField}
-              required={["title", "slug", "category"].includes(name)}
-              className="w-full rounded-lg border px-3 py-2"
-            />
-          </div>
-        ))}
-
-        {(
-          [
-            ["description", "Description"],
-            ["challenge", "Challenge"],
-            ["solution", "Solution"],
-            ["results", "Results"],
-          ] as const
-        ).map(([name, label]) => (
-          <div key={name}>
-            <label htmlFor={name} className="mb-1 block font-medium">
-              {label}
-            </label>
-            <textarea
-              id={name}
-              name={name}
-              value={form[name]}
-              onChange={updateField}
-              required={name === "description"}
-              rows={3}
-              className="w-full rounded-lg border px-3 py-2"
-            />
-          </div>
-        ))}
-
-        <div>
-          <label htmlFor="technologies" className="mb-1 block font-medium">
-            Technologies
-          </label>
-          <input
-            id="technologies"
-            name="technologies"
-            value={form.technologies}
-            onChange={updateField}
-            placeholder="React, Node.js, MongoDB"
-            className="w-full rounded-lg border px-3 py-2"
-          />
-          <p className="mt-1 text-sm text-gray-500">
-            Separate technologies with commas.
-          </p>
-        </div>
-
-        <div>
-          <label htmlFor="gallery_images" className="mb-1 block font-medium">
-            Gallery Image URLs
-          </label>
-          <textarea
-            id="gallery_images"
-            name="gallery_images"
-            value={form.gallery_images}
-            onChange={updateField}
-            placeholder="URL 1, URL 2"
-            rows={2}
-            className="w-full rounded-lg border px-3 py-2"
-          />
-          <p className="mt-1 text-sm text-gray-500">
-            Separate image URLs with commas.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-slate-900 px-5 py-3 font-semibold text-white disabled:opacity-60"
+        {error && (
+          <div
+            role="alert"
+            className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700"
           >
-            {saving
-              ? "Saving..."
-              : editingId === null
-                ? "Add Case Study"
-                : "Save Changes"}
-          </button>
+            {error}
+          </div>
+        )}
 
-          {editingId !== null && (
-            <button
-              type="button"
-              onClick={resetForm}
-              className="rounded-lg border px-5 py-3"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
+        {success && (
+          <div
+            role="status"
+            className="mb-5 rounded-lg border border-green-200 bg-green-50 p-4 text-green-700"
+          >
+            {success}
+          </div>
+        )}
 
-      <h2 className="mb-5 text-2xl font-bold">Existing Case Studies</h2>
+        <section className="mb-10 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+          <h2 className="mb-6 text-xl font-semibold">
+            {editingId !== null ? "Edit Case Study" : "Add Case Study"}
+          </h2>
 
-      {loading ? (
-        <p>Loading case studies...</p>
-      ) : caseStudies.length === 0 ? (
-        <p>No case studies found.</p>
-      ) : (
-        <div className="space-y-4">
-          {caseStudies.map((study) => (
-            <article key={study.id} className="rounded-xl border p-5">
-              <h3 className="text-xl font-semibold">{study.title}</h3>
-              <p className="mt-2">{study.description}</p>
-              <p className="mt-2 text-sm text-gray-500">
-                Category: {study.category}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid gap-5 sm:grid-cols-2">
+              {(
+                [
+                  ["title", "Title"],
+                  ["slug", "Slug"],
+                  ["category", "Category"],
+                  ["client", "Client / Company"],
+                  ["project_url", "Project URL"],
+                ] as const
+              ).map(([name, label]) => (
+                <div key={name}>
+                  <label
+                    htmlFor={name}
+                    className="mb-1 block font-medium"
+                  >
+                    {label}
+                  </label>
+
+                  <input
+                    id={name}
+                    name={name}
+                    value={form[name]}
+                    onChange={handleChange}
+                    required={name === "title" || name === "slug"}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <label
+                htmlFor="featured_image_upload"
+                className="mb-1 block font-medium"
+              >
+                Featured Image
+              </label>
+
+              <input
+                id="featured_image_upload"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={uploadingImage}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 disabled:opacity-60"
+              />
+
+              <p className="mt-2 text-sm text-slate-500">
+                {uploadingImage
+                  ? "Uploading image..."
+                  : "Select an image to upload to Cloudinary. Maximum size: 5 MB."}
               </p>
-              <p className="text-sm text-gray-500">Slug: {study.slug}</p>
 
-              <div className="mt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleEdit(study)}
-                  className="rounded-lg border px-4 py-2"
+              {form.featured_image && (
+                <div className="mt-4">
+                  <img
+                    src={form.featured_image}
+                    alt="Featured image preview"
+                    className="h-48 max-w-full rounded-lg border border-slate-200 object-cover"
+                  />
+
+                  <p className="mt-2 break-all text-sm text-slate-500">
+                    Image uploaded successfully.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        featured_image: "",
+                      }))
+                    }
+                    className="mt-2 text-sm font-medium text-red-600 hover:text-red-700"
+                  >
+                    Remove image
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="description"
+                className="mb-1 block font-medium"
+              >
+                Description
+              </label>
+
+              <textarea
+                id="description"
+                name="description"
+                value={form.description}
+                onChange={handleChange}
+                rows={3}
+                required
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="technologies"
+                className="mb-1 block font-medium"
+              >
+                Technologies
+              </label>
+
+              <input
+                id="technologies"
+                name="technologies"
+                value={form.technologies}
+                onChange={handleChange}
+                placeholder="Next.js, TypeScript, Tailwind CSS"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+
+              <p className="mt-1 text-sm text-slate-500">
+                Separate technologies with commas.
+              </p>
+            </div>
+
+            {(
+              [
+                ["challenge", "Challenge"],
+                ["solution", "Solution"],
+                ["results", "Results"],
+              ] as const
+            ).map(([name, label]) => (
+              <div key={name}>
+                <label
+                  htmlFor={name}
+                  className="mb-1 block font-medium"
                 >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(study.id)}
-                  className="rounded-lg border border-red-300 px-4 py-2 text-red-700"
-                >
-                  Delete
-                </button>
+                  {label}
+                </label>
+
+                <textarea
+                  id={name}
+                  name={name}
+                  value={form[name]}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
               </div>
-            </article>
-          ))}
-        </div>
-      )}
+            ))}
+
+            <div>
+              <label
+                htmlFor="gallery_images"
+                className="mb-1 block font-medium"
+              >
+                Gallery Image URLs
+              </label>
+
+              <textarea
+                id="gallery_images"
+                name="gallery_images"
+                value={form.gallery_images}
+                onChange={handleChange}
+                rows={3}
+                placeholder={"Paste one image URL per line"}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+
+              <p className="mt-1 text-sm text-slate-500">
+                Optional. Enter one image URL per line.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="submit"
+                disabled={saving || uploadingImage}
+                className="rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving
+                  ? "Saving..."
+                  : editingId !== null
+                    ? "Save Changes"
+                    : "Add Case Study"}
+              </button>
+
+              {editingId !== null && (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-lg border border-slate-300 px-5 py-2.5 font-medium hover:bg-slate-100"
+                >
+                  Cancel Editing
+                </button>
+              )}
+            </div>
+          </form>
+        </section>
+
+        <section>
+          <h2 className="mb-5 text-xl font-semibold">
+            Existing Case Studies
+          </h2>
+
+          {loading ? (
+            <p className="text-slate-600">Loading case studies...</p>
+          ) : caseStudies.length === 0 ? (
+            <p className="rounded-lg border border-slate-200 bg-white p-5 text-slate-600">
+              No case studies found.
+            </p>
+          ) : (
+            <div className="grid gap-5 md:grid-cols-2">
+              {caseStudies.map((caseStudy) => (
+                <article
+                  key={caseStudy.id}
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+                >
+                  {caseStudy.featured_image && (
+                    <img
+                      src={caseStudy.featured_image}
+                      alt={caseStudy.title}
+                      className="h-48 w-full object-cover"
+                    />
+                  )}
+
+                  <div className="p-5">
+                    <h3 className="text-lg font-semibold">
+                      {caseStudy.title}
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      {caseStudy.category}
+                      {caseStudy.client ? ` · ${caseStudy.client}` : ""}
+                    </p>
+
+                    <p className="mt-3 line-clamp-3 text-slate-700">
+                      {caseStudy.description}
+                    </p>
+
+                    <p className="mt-3 text-sm text-slate-500">
+                      Technologies:{" "}
+                      {parseList(caseStudy.technologies).join(", ") || "None"}
+                    </p>
+
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => startEditing(caseStudy)}
+                        className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(caseStudy.id)}
+                        className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </main>
   );
 }

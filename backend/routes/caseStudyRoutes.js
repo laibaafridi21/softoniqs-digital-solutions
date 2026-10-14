@@ -4,7 +4,7 @@ const router = express.Router();
 const supabase = require("../config/supabase");
 const authMiddleware = require("../middleware/authMiddleware");
 
-// Get all case studies
+
 router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -22,7 +22,9 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Create a case study
+
+
+
 router.post("/", authMiddleware, async (req, res) => {
   try {
     const {
@@ -126,7 +128,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// Delete a case study
+
 router.delete("/:id", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;

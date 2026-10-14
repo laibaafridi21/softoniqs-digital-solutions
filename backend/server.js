@@ -1,6 +1,7 @@
  
  
  require("dotenv").config();
+ const supabase = require("./config/supabase");
 
 const express = require("express");
 const authRoutes = require("./routes/auth");
@@ -8,6 +9,7 @@ const authMiddleware =require ("./middleware/authMiddleware.js")
 const cors =require ("cors");
 const serviceRoutes = require("./routes/serviceRoutes")
 const caseStudyRoutes = require("./routes/caseStudyRoutes");
+const uploadRoutes = require("./routes/uploadRoutes");
 
 const app = express();
 app.use(cors());
@@ -80,10 +82,13 @@ app.get("/api/admin/contact-message",authMiddleware, async (req, res)  =>  {
  }
  res.json(data);
 });
+app.use("/api/upload", uploadRoutes);
 
 
 
 
-app.listen(5000, () => {
-  console.log("Server is running on port 5000");
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });

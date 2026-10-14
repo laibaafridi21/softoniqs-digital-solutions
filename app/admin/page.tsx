@@ -257,7 +257,7 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
-      {/* Dashboard Header */}
+  
       <header className="border-b border-slate-800 bg-slate-950 text-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-7 sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <div>
@@ -282,7 +282,7 @@ export default function AdminPage() {
       </header>
 
       <div className="mx-auto max-w-7xl space-y-10 px-5 py-8 sm:px-8 sm:py-10">
-        {/* Summary Cards */}
+      
         <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
@@ -324,7 +324,7 @@ export default function AdminPage() {
           </div>
         </section>
 
-        {/* Feedback Messages */}
+      
         {error && (
           <div
             role="alert"
@@ -343,7 +343,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Add / Edit Service Form */}
+      
         <section
           id="service-form"
           className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
@@ -483,7 +483,7 @@ export default function AdminPage() {
           </form>
         </section>
 
-        {/* Manage Services */}
+    
         <section>
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -613,7 +613,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* Contact Messages */}
+      
         <section>
           <div className="mb-6">
             <p className="text-sm font-semibold uppercase tracking-wider text-violet-700">
